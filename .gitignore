@@ -1,0 +1,13 @@
+__pycache__
+*.tif
+*.rib
+*.jpg
+*.mpg
+*.slx
+*.wings
+*.mtl
+*.obj
+*.mp4
+*.mp3
+*.flac
+*.wav
