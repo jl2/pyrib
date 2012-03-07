@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 from pyrib import *
+
+import itertools
 import math
 import sys
 
@@ -43,9 +45,11 @@ def PlaceCamera(cam):
     negloc = [-1*x for x in loc]
     RiTranslate(*negloc)
 
+def f(u,v):
+    return 2*math.sin(u) * math.cos(v)
 
 def main(args):
-    rad = 12
+    rad = 16
     cam = {'location': [rad,rad,rad],
            'look_at': [0,0,0],
            'roll':0}
@@ -58,7 +62,7 @@ def main(args):
 
     for i in range(NUM_FRAMES):
         RiFrameBegin(i);
-
+        print("Rendering frame", i)
         RiDisplay("images/image{}.tif".format(i),"file","rgba")
         RiFormat(800, 600,  1.25)
 
@@ -69,16 +73,28 @@ def main(args):
         PlaceCamera(cam)
 
         RiWorldBegin()
-        RiColor(1,0,0)
-        bob = RtColor(1,0,0)
-        RiPolygon(4, "P",to_rfa([-10,-10,-2,
-                               10,-10,-2,
-                               10,10,-2,
-                               -10,10,-2
-                               ]))
-        # RiSurface("plastic")
-        RiColor(0,0,1)
-        RiSphere(2, -2,2, 360)
+        umin = vmin = -4*math.pi
+        umax = vmax = 4*math.pi
+        steps = 128
+        du = (umax - umin) / (steps-1)
+        dv = (vmax - vmin) / (steps-1)
+
+        RiColor(0,1,0)
+        for pt in itertools.product(range(0,steps), range(0,steps)):
+            u,v = pt
+            u *= du
+            v *= dv
+            u += umin
+            v += vmin
+            RiTransformBegin()
+            RiPolygon(3, "P",to_rfa([u,f(u,v),v,
+                                     u+du,f(u+du,v+dv),v+dv,
+                                     u+du,f(u+du,v),v,
+                                 ]))
+            RiPolygon(3, "P",to_rfa([u,f(u,v),v,
+                               u,f(u,v+dv),v+dv,
+                               u+du,f(u+du,v+dv),v+dv]))
+            RiTransformEnd()
 
         RiWorldEnd()
         RiFrameEnd()
