@@ -23,7 +23,11 @@ import ctypes
 import os
 
 delight_path = os.getenv("DELIGHT")
-delight_lib = delight_path + '/lib/lib3delight.dylib'
+libnames = {'nt': '/bin/3delight.dll',
+            'linux': '/lib/lib3delight.so',
+            'darwin': '/lib/lib3delight.dylib'}
+
+delight_lib = delight_path + libnames[os.name]
 rlib = ctypes.CDLL(delight_lib)
 
 RI_FRAMEBUFFER = 'framebuffer'
