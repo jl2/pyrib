@@ -487,10 +487,10 @@ def RiSkew(angle, dx1, dy1, dz1, dx2, dy2, dz2):
 def RiTransform(transform):
     rlib.RiTransform(to_c(transform))
 
-def RiTransformBegin(void):
+def RiTransformBegin():
     rlib.RiTransformBegin()
 
-def RiTransformEnd(void):
+def RiTransformEnd():
     rlib.RiTransformEnd()
 
 # DL_INTERFACE RtPoint* RiTransformPoints(RtToken fromspace,
@@ -604,10 +604,10 @@ def RiAttribute(name, *args):
 # DL_INTERFACE RtVoid RiAttributeV(
 # 		RtToken name,
 # 		RtInt n, __RI_CONST RtToken tokens[], RtPointer parms[]);
-def RiAttributeBegin(void):
+def RiAttributeBegin():
     rlib.RiAttributeBegin()
 
-def RiAttributeEnd(void):
+def RiAttributeEnd():
     rlib.RiAttributeEnd()
 
 def RiBound(bound ):
