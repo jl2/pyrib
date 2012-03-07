@@ -45,7 +45,7 @@ def PlaceCamera(cam):
 
 
 def main(args):
-    rad = 3
+    rad = 12
     cam = {'location': [rad,rad,rad],
            'look_at': [0,0,0],
            'roll':0}
@@ -69,7 +69,15 @@ def main(args):
         PlaceCamera(cam)
 
         RiWorldBegin()
-    
+        RiColor(1,0,0)
+        bob = RtColor(1,0,0)
+        RiPolygon(4, "P",to_rfa([-10,-10,-2,
+                               10,-10,-2,
+                               10,10,-2,
+                               -10,10,-2
+                               ]))
+        # RiSurface("plastic")
+        RiColor(0,0,1)
         RiSphere(2, -2,2, 360)
 
         RiWorldEnd()
