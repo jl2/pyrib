@@ -1,7 +1,27 @@
 pyrib is a wrapper around the Renderman library.
 
-It currently supports 3Delight, but support for PRman and other Renderman compatible renderers should be easy to add.
+It currently only supports 3Delight, but support for PRman and other Renderman compatible renderers should be easy to add.
 
-It is currently in a *very* early stage.  Essentially the only functions implemented yet are the ones using only basic data types such as RtFloat, RtInt and RtToken.
+The subset of functionality I use most frequently should be implemented.  This includes functions for specifying simple geometry, transforms, shaders, etc.  More advanced features like subdivision meshes are connected, but have not been tested.
 
-RiSphere and RiDisplay are hacked up so that the sample application can display something.
+Some functionality has not even been attempted yet, specifically those that require callback functions, such as RiReadArchive.
+
+
+The biggest issue right now is conversion between Python types and the types expected by Renderman.  An attempt is made to convert automatically, but it is not working in all cases.
+
+
+The biggest problem with the auto-conversion are float/int.  The following example will fail because [-40,80,40] is auto-converted to an array of int, instead of an array of float.
+
+RiLightSource("distantlight", "from", [-40,80,40], "to", [0,0,0])
+
+
+Two workarounds are possible.  First, make the first element of the lists float, because the type of the array is based on the type of the first element:
+
+RiLightSource("distantlight", "from", [-40.0,80,40], "to", [0.0,0,0])
+
+
+Second, the "to_fa" function will try to convert the list to a list of floats:
+
+RiLightSource("distantlight", "from", to_fa([-40,80,40]), "to", to_fa([0.0,0,0]))
+
+
