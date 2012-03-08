@@ -49,7 +49,7 @@ def f(u,v):
     return 2*math.sin(u) * math.cos(v)
 
 def main(args):
-    rad = 20
+    rad = 16
     cam = {'location': [rad,rad,rad],
            'look_at': [0,0,0],
            'roll':0}
@@ -80,22 +80,13 @@ def main(args):
         dv = (vmax - vmin) / (steps-1)
 
         RiColor(0,1,0)
-        for pt in itertools.product(range(0,steps), range(0,steps)):
-            u,v = pt
-            u *= du
-            v *= dv
-            u += umin
-            v += vmin
-            RiTransformBegin()
-            RiPolygon(3, "P",to_fa([u,f(u,v),v,
-                                    u+du,f(u+du,v+dv),v+dv,
-                                    u+du,f(u+du,v),v,
-                                    ]))
-            RiPolygon(3, "P",to_fa([u,f(u,v),v,
-                                    u,f(u,v+dv),v+dv,
-                                    u+du,f(u+du,v+dv),v+dv]))
-            RiTransformEnd()
-
+        RiTorus(8, 1, 0, 360, 360)
+        RiParaboloid(4, 0, 4, 360)
+        RiHyperboloid([4,4,4], [4,4, 0], 360)
+        RiTransformBegin()
+        RiTranslate(0, 0, 8)
+        RiSphere(3, -3, 3, 360)
+        RiTransformEnd()
         RiWorldEnd()
         RiFrameEnd()
     RiEnd();
