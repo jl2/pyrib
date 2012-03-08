@@ -71,6 +71,8 @@ def main(args):
 
         RiProjection("perspective")
         PlaceCamera(cam)
+        RiAttribute("light", "string shadow", "on")
+        RiLightSource("distantlight", "from", to_fa([-40,80,40]), "to", to_fa([0,0,0]))
 
         RiWorldBegin()
         umin = vmin = -4*math.pi
@@ -83,10 +85,12 @@ def main(args):
         RiTorus(8, 1, 0, 360, 360)
         RiParaboloid(4, 0, 4, 360)
         RiHyperboloid([4,4,4], [4,4, 0], 360)
-        RiTransformBegin()
+        RiAttributeBegin()
+        RiColor(1,0,0)
         RiTranslate(0, 0, 8)
+        RiSurface("plastic")
         RiSphere(3, -3, 3, 360)
-        RiTransformEnd()
+        RiAttributeEnd()
         RiWorldEnd()
         RiFrameEnd()
     RiEnd();
