@@ -87,13 +87,13 @@ def main(args):
             u += umin
             v += vmin
             RiTransformBegin()
-            RiPolygon(3, "P",to_fa([u,f(u,v),v,
-                                    u+du,f(u+du,v+dv),v+dv,
-                                    u+du,f(u+du,v),v,
-                                    ]))
-            RiPolygon(3, "P",to_fa([u,f(u,v),v,
-                                    u,f(u,v+dv),v+dv,
-                                    u+du,f(u+du,v+dv),v+dv]))
+            RiPolygon(3, P = [u,f(u,v),v,
+                              u+du,f(u+du,v+dv),v+dv,
+                              u+du,f(u+du,v),v,
+                              ])
+            RiPolygon(3, P = [u,f(u,v),v,
+                              u,f(u,v+dv),v+dv,
+                              u+du,f(u+du,v+dv),v+dv])
             RiTransformEnd()
 
         RiWorldEnd()

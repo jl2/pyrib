@@ -85,7 +85,7 @@ def main(args):
         RiProjection("perspective")
         PlaceCamera(cam)
         RiAttribute("light", "string shadow", "on")
-        RiLightSource("distantlight", "from", to_fa([-40,80,40]), "to", to_fa([0,0,0]))
+        RiLightSource("distantlight", "from", to_fa([-40,80,40]), to=to_fa([0,0,0]))
         RiImager("background")
         RiWorldBegin()
         umin = vmin = -4*math.pi

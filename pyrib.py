@@ -266,7 +266,7 @@ def to_ri(val):
 # RtPointer parms[] = {verts};
 # RiPolygonV(4, 1, tokens, parms);
 
-# The following functions (to_c, get_c_type, make_void_p and parse_extra_args) convert a Python *args parameter
+# The following functions (to_c, get_c_type, make_void_p and parse_extra_args) convert a Python **kwargs parameter
 # into the RtInt n, RtToken tokens[], RtPointer parms[] parameters used by the *V functions
 
 # to_c() may be useful by itself
@@ -283,6 +283,7 @@ def to_c(val):
         if len(val) >0:
             return (get_c_type(val[0])*len(val))(*list(map(to_c, val)))
         return None
+    return val
 
 def get_c_type(val):
     tmp_type = type(val)
@@ -300,15 +301,50 @@ def get_c_type(val):
 def make_void_p(val):
     return ctypes.cast(to_c(val), ctypes.c_void_p)
 
-def parse_extra_args(args):
+def to_rfa_flatten(val):
+    rv = []
+    for v in val:
+        if type(v) == type(list()):
+            rv = rv + to_rfa(v)
+        else:
+            rv.append(float(v))
+    return list(map(ctypes.c_float, rv))
+
+# This function attempts to convert parameters based on expected types
+def convert(token, val):
+    if token not in {"P", "Pz", "Pw", "N", "Np", "Cs", "Os", "s", "t", "st"}:
+        return to_c(val)
+    
+    rv = to_rfa_flatten(val)
+    if token in {"P", "N", "Np", "Os", "Cs"} and len(rv)%3 != 0:
+            raise RuntimeError('"{}" requires a multiple of three arguments!')
+
+    if token in {"st"} and len(rv)%2 != 0:
+        raise RuntimeError('"{}" requires a multiple of two arguments!')
+    return (ctypes.c_float*len(rv))(*rv)
+
+def parse_extra_args(args, kwargs):
     toks = []
     parms = []
+    num_params = len(args) + len(kwargs.keys())
+    if num_params == 0:
+        return (0,None, None)
+
     for i in range(len(args)//2):
-        toks.append(args[i*2])
-        parms.append(args[i*2+1])
-    p2 = list(map(lambda x: ctypes.cast(to_c(x), ctypes.c_void_p), parms))
-    p3 = (ctypes.c_void_p*len(p2))(*p2)
-    return (to_c(len(toks)), to_c(toks), p3)
+        toks.append(tok2c(args[i*2]))
+        parms.append(ctypes.cast(to_c(args[i*2+1]), ctypes.c_void_p))
+
+    
+    i = 0
+    for k in kwargs.keys():
+        toks.append(tok2c(k))
+        rib_val = convert(k, kwargs[k])
+        parms.append(ctypes.cast(rib_val, ctypes.c_void_p))
+        i += 1
+    toks = (ctypes.c_char_p*len(toks))(*toks)
+    parms = (ctypes.c_void_p*len(parms))(*parms)
+    rv = (to_ri(len(toks)), toks, parms)
+    return rv
 
 def tok2c(val):
     return ctypes.c_char_p(val.encode('utf8'))
@@ -324,7 +360,7 @@ def RiEnd():
 
 
 def RiCamera(camera):
-    (n, toks, parms) = parse_extra_args(args)
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiCameraV(tok2c(camera), n, toks, parms)
 
 # DL_INTERFACE RtVoid RiCameraV(
@@ -367,8 +403,8 @@ def RiWorldBegin():
 def RiWorldEnd():
     rlib.RiWorldEnd()
 
-def RiObjectBegin(*args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiObjectBegin(*args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     return rlib.RiObjectBeginV(n, toks, parms)
 
 def RiObjectEnd():
@@ -378,8 +414,8 @@ def RiObjectEnd():
 def RiObjectInstance(handle):
     rlib.RiObjectInstance(handle)
 
-def RiResource(handle, rtype, *args):
-    (n, toks, parms) = parse_extra_args(args)    
+def RiResource(handle, rtype, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)    
     rlib.RiResourceV(tok2c(handle), tok2c(rtype), n, toks, parms)
 
 def RiResourceBegin():
@@ -409,26 +445,26 @@ def RiCropWindow(xmin, xmax, ymin, ymax):
 def RiDepthOfField(fstop, focallength, focaldistance):
     rlib.RiDepthOfField(to_rf(fstop), to_rf(focallength), to_rf(focaldistance))
 
-def RiProjection(name, *args):
-    (n, toks, parms) = parse_extra_args(args)    
+def RiProjection(name, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)    
     rlib.RiProjectionV(tok2c(name), n, toks,parms)
 
-def RiShutter(smin, max):
+def RiShutter(smin, smax):
     rlib.RiShutter(to_rf(smin), to_rf(smax))
 
-def RiDisplay(name, dtype, mode, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiDisplay(name, dtype, mode, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiDisplayV(tok2c(name), tok2c(dtype), tok2c(mode), n, toks, parms)
                   
-def RiDisplayChannel(channel, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiDisplayChannel(channel, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiDisplayChannelV(tok2c(channel), n,toks, parms)
 
 def RiExposure(gain, gamma):
     rlib.RiExposure(to_rf(gain), to_rf(gamma))
 
-def RiImager(name, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiImager(name, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiImagerV(tok2c(name), n,toks, parms)
 
 # TODO: Implement RiPixelFilter
@@ -459,7 +495,7 @@ def RiIdentity():
     rlib.RiIdentity()
 
 def RiPerspective(fov):
-    rlib.RiPerspective(ctypes.c_cloat(fov))
+    rlib.RiPerspective(ctypes.c_float(fov))
 
 def RiRotate(angle, dx, dy, dz):
     rlib.RiRotate(to_rf(angle), to_rf(dx), to_rf(dy), to_rf(dz))
@@ -488,31 +524,31 @@ def RiTransformEnd():
 def RiTransformPoints(fromspace, tospace, n, points):
     return rlib.RiTransformPoints(tok2c(fromspace), tok2c(tospace), to_ri(n), to_c(points))
 
-def RiAtmosphere(name, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiAtmosphere(name, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiAtmosphereV(tok2c(name), n, toks, parms)
 
-def RiDeformation(name, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiDeformation(name, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiDeformationV(tok2c(name), n, toks, parms)
 
-def RiDisplacement(name, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiDisplacement(name, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiDisplacementV(tok2c(name), n,toks,parms)
 
-def RiExterior(name, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiExterior(name, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiExteriorV(tok2c(name), n, toks, parms)
 
 def RiIlluminate(light, onoff):
     rlib.RiIlluminate(light, ctypes.c_bool(onoff))
 
-def RiInterior(name, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiInterior(name, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiInteriorV(tok2c(name), n, toks, parms)
 
-def RiShader(name, handle, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiShader(name, handle, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiShaderV(tok2c(name), to_c(handle), n, toks, parms)
 
 def RiMatte(onoff):
@@ -527,8 +563,8 @@ def RiShadingRate(size):
 def RiShadingInterpolation(itype):
     rlib.RiShadingInterpolation(tok2c(itype))
 
-def RiSurface(name, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiSurface(name, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiSurfaceV(tok2c(name), n, toks, parms)
 
 # TODO: implement RiArchiveRecord
@@ -542,20 +578,20 @@ def RiSurface(name, *args):
 # 		RtToken name, RtArchiveCallback callback,
 # 		RtInt n, __RI_CONST RtToken tokens[], RtPointer parms[]);
 
-def RiArchiveBegin(archivename, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiArchiveBegin(archivename, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     return rlib.RiArchiveBegin(tok2c(archivename), n, toks, parms)
 
 def RiArchiveEnd():
     rlib.RiArchiveEnd()
 
 
-def RiIfBegin(expression, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiIfBegin(expression, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiIfBeginV(tok2c(expression), n, toks, parms)
 
-def RiElseIf(expression, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiElseIf(expression, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiElseIfV(tok2c(expression), n, toks, parms)
 
 def RiElse():
@@ -564,8 +600,8 @@ def RiElse():
 def RiIfEnd():
     rlib.RiIfEnd()
 
-def RiAttribute(name, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiAttribute(name, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiAttributeV(to_c(name), n, toks, parms)
 
 def RiAttributeBegin():
@@ -583,8 +619,8 @@ def RiColor( *color ):
 def RiOpacity(*color):
     rlib.RiOpacity(RtColor(*to_rfa(color)))
 
-def RiOption(name, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiOption(name, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiOptionV(tok2c(name), n, toks, parms)
 
 def RiReverseOrientation():
@@ -602,12 +638,12 @@ def RiSides(sides):
 def RiDeclare(name, declaration):
     rlib.RiDeclar(tok2c(name), tok2c(declaration))
 
-def RiLightSource(name, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiLightSource(name, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     return rlib.RiLightSourceV(tok2c(name), n, toks, parms)
 
-def RiAreaLightSource(name, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiAreaLightSource(name, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     return rlib.RiAreaLightSourceV(tok2c(name), n, toks, parms)
 
 # TODO: Check RtBasis type is working here
@@ -616,33 +652,33 @@ def RiAreaLightSource(name, *args):
 def RiBasis(ubasis, ustep, vbasis, vstep):
     rlib.RiBasis(RtBasis(*ubasis), ustep, RtBasis(*vbasis), vstep)
 
-def RiPatch(ptype, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiPatch(ptype, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiPatchV(tok2c(ptype), n, toks, parms)
 
-def RiPatchMesh(ptype, nu, uwrap, nv, vwrap, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiPatchMesh(ptype, nu, uwrap, nv, vwrap, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiPatchMeshV(tok2c(ptype), to_ri(nu), tok2c(uwrap),
                       to_ri(nv), tok2c(vwrap), n, toks, parms)
                     
-def RiPoints(npoints, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiPoints(npoints, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiPointsV(to_ri(npoints), n, toks, parms)
 
-def RiCurves(ctype, ncurves, nvertices, wrap, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiCurves(ctype, ncurves, nvertices, wrap, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiCurvesV(tok2c(ctype), to_ri(ncurves), to_ri(nvertices), tok2c(wrap), n, toks, parms)
 
 
-def RiNuCurves(ncurves, nvertices, order, knot, cmin, cmax, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiNuCurves(ncurves, nvertices, order, knot, cmin, cmax, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiNuCurvesV(to_ri(ncurves), to_ria(nvertices),
                      to_ria(order), to_rfa(knot),
                      to_rfa(cmin), to_rfa(cmax), n, toks, parms)
 
 def RiNuPatch(nu, uorder, uknot, umin, umax,
-              nv, vorder, vknot, vmin, vmax, *args):
-    (n, toks, parms) = parse_extra_args(args)
+              nv, vorder, vknot, vmin, vmax, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiNuPatchV(to_ri(nu), to_ri(uorder), to_rfa(uknot), to_rf(umin), to_rf(umax),
                      to_ri(nv), to_ri(vorder), to_rfa(vknot), to_rf(vmin), to_rf(vmax), n, toks, parms)
               
@@ -651,74 +687,74 @@ def RiTrimCurve(nloops, ncurves, order, knot, cmin, cmax, n, u, v, w):
                      to_ria(n), to_rfa(u), to_rfa(v), to_rfa(w))
 
 def RiSubdivisionMesh(scheme, nfaces, nvertices, vertices, ntags, tags, nargs, intargs, floatargs):
-    (nn, toks, parms) = parse_extra_args(args)
+    (nn, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiSubdivisionMeshV(tok2c(scheme), to_ri(nfaces), to_ria(nvertices), to_ria(vertices),
                                         to_ri(ntags), to_rsa(tags), to_ria(nargs),
                                         to_ria(intargs), to_rfa(floatargs),
                                         nn, toks, parms)
 def RiHierarchicalSubdivisionMesh(scheme, nfaces, nvertices, vertices, ntags,
-                                  tags, nargs, intargs, floatargs, stringargs, *args):
-    (nn, toks, parms) = parse_extra_args(args)
+                                  tags, nargs, intargs, floatargs, stringargs, *args, **kwargs):
+    (nn, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiHierarchicalSubdivisionMeshV(tok2c(scheme), to_ri(nfaces), to_ria(nvertices), to_ria(vertices),
                                         to_ri(ntags), to_c(tags), to_ria(nargs),
                                         to_ria(intargs), to_rfa(floatargs), to_rsa(stringargs),
                                         nn, toks, parms)
 
-def RiCone(height, radius, thetamax, *args):
-    (nn, toks, parms) = parse_extra_args(args)
+def RiCone(height, radius, thetamax, *args, **kwargs):
+    (nn, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiConeV(to_rf(height), to_rf(radius), to_rf(thetamax), nn, toks, parms)
 
-def RiCylinder(height, radius, zmin, zmaxthetamax, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiCylinder(height, radius, zmin, zmaxthetamax, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiCylinderV(to_rf(height), to_rf(radius), to_rf(zmin), to_rf(zmax), to_rf(thetamax), n, toks, parms)
 
-def RiDisk(height, radius, thetamax, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiDisk(height, radius, thetamax, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiDiskV(to_rf(height), to_rf(radius), to_rf(theatmax), n, toks, parms)
 
-def RiHyperboloid(p1, p2, thetamax, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiHyperboloid(p1, p2, thetamax, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiHyperboloidV(RtPoint(*p1), RtPoint(*p2), to_rf(thetamax), n, toks, parms)
 
-def RiParaboloid(rmax, zmin, zmax, thetamax, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiParaboloid(rmax, zmin, zmax, thetamax, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiParaboloidV(to_rf(rmax), to_rf(zmin), to_rf(zmax), to_rf(thetamax), n, toks, parms)
 
-def RiSphere(radius,zmin,zmax, thetamax, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiSphere(radius,zmin,zmax, thetamax, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiSphereV(to_rf(radius), to_rf(zmin), to_rf(zmax),
                    to_rf(thetamax), n, toks,parms)
 
-def RiTorus(majorradius, minorradius, phimin, phimax, thetamax, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiTorus(majorradius, minorradius, phimin, phimax, thetamax, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiTorusV(to_rf(majorradius), to_rf(minorradius), to_rf(phimin), to_rf(phimax), to_rf(thetamax), n, toks, parms)
 
-def RiGeneralPolygon(nloops, nvertices, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiGeneralPolygon(nloops, nvertices, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiGeneralPolygonV(to_ri(nloops), to_ria(nvertices), n, toks, parms)
 
-def RiBlobby(nleaf, nentry, entry, nfloat, floats, nstring, strings, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiBlobby(nleaf, nentry, entry, nfloat, floats, nstring, strings, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiBlobbyV(to_ri(nleaf), to_ri(nentry), to_ria(entry), to_ri(nfloat), to_rfa(floats), to_ri(nstring), to_rsa(strings), n, toks, parms)
 
-def RiPointsGeneralPolygons(npolys, nloops, nvertices, vertices, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiPointsGeneralPolygons(npolys, nloops, nvertices, vertices, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiPointsGeneralPolygonsV(to_ri(npolys), to_ria(nloops), to_ria(nvertices), to_ria(vertices), n, toks, parms)
 
-def RiPointsPolygons(npolys, nvertices, vertices, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiPointsPolygons(npolys, nvertices, vertices, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiPointsPolygonsV(to_ri(npolys), to_ria(nvertices), to_ria(vertices), n, toks, parms)
 
 
-def RiPolygon(nvertices, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiPolygon(nvertices, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiPolygonV(to_ri(nvertices), n, toks, parms)
 
 def RiColorSamples(n, nRGB, RGBn):
     rlib.RiColorSamples(to_ri(n), to_rfa(nRGB), to_rfa(RGBn))
 
-def RiHider(htype, *args):
-    (n, toks, parms) = parse_extra_args(args)
+def RiHider(htype, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
     rlib.RiHiderV(tok2c(htype), n, toks, parms)
 
 def RiDetail(*bound):
@@ -730,9 +766,9 @@ def RiDetailRange(minvisible, lowertransition, uppertransition, maxvisible):
 def RiGeometricApproximation(gatype, value):
     rlib.RiGeometricApproximation(tok2c(gatype), to_rf(value))
 
-def RiGeometry(gtype, *args):
-    (n, toks, parms) = parse_extra_args(args)
-    rlib.RiGeometry(tok2c(gtype), n, toks, parms)
+def RiGeometry(gtype, *args, **kwargs):
+    (n, toks, parms) = parse_extra_args(args, kwargs)
+    rlib.RiGeometryV(tok2c(gtype), n, toks, parms)
 
 def RiOrientation(orientation):
     rlib.RiOrientation(tok2c(orientation))
@@ -777,6 +813,10 @@ def RiRelativeDetail(relativedetail):
 # 		RtFloat swidth, RtFloat twidth,
 # 		RtInt n, __RI_CONST RtToken tokens[],
 # 		RtPointer parms[] );
+# def RiMakeBump(picturename, texturename, swrap, twrap,filterfunc, swidth, twidth, *args, **kwargs):
+#     (n, toks, parms) = parse_extra_args(args, kwargs)
+#     rlib.RiMakeBumpV(tok2c(picturename), tok2c(texturename), tok2c(swrap), tok2c(twrap),
+
 # DL_INTERFACE RtVoid RiMakeCubeFaceEnvironment(
 # 		const char *px, const char *nx,
 # 		const char *py, const char *ny,
