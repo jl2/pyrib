@@ -304,8 +304,8 @@ def make_void_p(val):
 def to_rfa_flatten(val):
     rv = []
     for v in val:
-        if type(v) == type(list()):
-            rv = rv + to_rfa(v)
+        if type(v) in { type(list()), type(())}:
+            rv = rv + to_fa(v)
         else:
             rv.append(float(v))
     return list(map(ctypes.c_float, rv))
