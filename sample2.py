@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
-from pyrib import *
-
+import ri
 
 import itertools
 import argparse
 import math
 import sys
+import os.path
 
 def AimZ(direction):
 
@@ -26,18 +26,18 @@ def AimZ(direction):
     xrot = 180*math.acos(xzlen/yzlen)/math.pi
 
     if (direction[1] > 0):
-        RiRotate(xrot, 1.0, 0.0, 0.0)
+        ri.Rotate(xrot, 1.0, 0.0, 0.0)
     else:
-        RiRotate(-xrot, 1.0, 0.0, 0.0)
+        ri.Rotate(-xrot, 1.0, 0.0, 0.0)
 
     if (direction[0] > 0):
-        RiRotate(-yrot, 0.0, 1.0, 0.0)
+        ri.Rotate(-yrot, 0.0, 1.0, 0.0)
     else:
-        RiRotate(yrot, 0.0, 1.0, 0.0)
+        ri.Rotate(yrot, 0.0, 1.0, 0.0)
 
 
 def PlaceCamera(cam):
-    RiRotate(-cam['roll'], 0.0, 0.0, 1.0);
+    ri.Rotate(-cam['roll'], 0.0, 0.0, 1.0);
     la = cam['look_at']
     loc = cam['location']
     direction = [la[0]-loc[0],
@@ -45,7 +45,7 @@ def PlaceCamera(cam):
                  la[2]-loc[2]]
     AimZ(direction)
     negloc = [-1*x for x in loc]
-    RiTranslate(*negloc)
+    ri.Translate(*negloc)
 
 def f(u,v):
     return 2*math.sin(u) * math.cos(v)
@@ -67,46 +67,46 @@ def main(args):
            'look_at': [0,0,0],
            'roll':0}
     
-    RiBegin()
-    RiSides(2);
+    ri.Begin()
+    ri.Sides(2);
     NUM_FRAMES = pargs.frames
     t = 0
     dt = 2*math.pi/(NUM_FRAMES-1);
 
     for i in range(NUM_FRAMES):
-        RiFrameBegin(i);
+        ri.FrameBegin(i);
         print("Rendering frame", i)
-        RiDisplay("images/{}{:05d}.jpg".format(pargs.prefix, i),"jpeg","rgb")
-        RiFormat(800, 600,  1.25)
+        ri.Display("images/{}{:05d}.jpg".format(pargs.prefix, i),"jpeg","rgb")
+        ri.Format(800, 600,  1.25)
 
         cam['location'] = [rad * math.sin(t), rad, rad * math.cos(t)]
         t += dt;
 
-        RiProjection("perspective")
+        ri.Projection("perspective")
         PlaceCamera(cam)
-        RiAttribute("light", "string shadow", "on")
-        RiLightSource("distantlight", "from", to_fa([-40,80,40]), "to", to_fa([0,0,0]))
+        ri.Attribute("light", "string shadow", "on")
+        ri.LightSource("distantlight", "from", ri.to_fa([-40,80,40]), "to", ri.to_fa([0,0,0]))
 
-        RiWorldBegin()
+        ri.WorldBegin()
         umin = vmin = -4*math.pi
         umax = vmax = 4*math.pi
         steps = 128
         du = (umax - umin) / (steps-1)
         dv = (vmax - vmin) / (steps-1)
 
-        RiColor(0,1,0)
-        RiTorus(8, 1, 0, 360, 360)
-        RiParaboloid(4, 0, 4, 360)
-        RiHyperboloid([4,4,4], [4,4, 0], 360)
-        RiAttributeBegin()
-        RiColor(1,0,0)
-        RiTranslate(0, 0, 8)
-        RiSurface("plastic")
-        RiSphere(3, -3, 3, 360)
-        RiAttributeEnd()
-        RiWorldEnd()
-        RiFrameEnd()
-    RiEnd();
+        ri.Color(0,1,0)
+        ri.Torus(8, 1, 0, 360, 360)
+        ri.Paraboloid(4, 0, 4, 360)
+        ri.Hyperboloid([4,4,4], [4,4, 0], 360)
+        ri.AttributeBegin()
+        ri.Color(1,0,0)
+        ri.Translate(0, 0, 8)
+        ri.Surface("plastic")
+        ri.Sphere(3, -3, 3, 360)
+        ri.AttributeEnd()
+        ri.WorldEnd()
+        ri.FrameEnd()
+    ri.End();
 
     out_movie = pargs.out
     idx = out_movie.rfind('.')

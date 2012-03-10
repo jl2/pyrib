@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from pyrib import *
+import ri
 
 import itertools
 import math
@@ -24,18 +24,18 @@ def AimZ(direction):
     xrot = 180*math.acos(xzlen/yzlen)/math.pi
 
     if (direction[1] > 0):
-        RiRotate(xrot, 1.0, 0.0, 0.0)
+        ri.Rotate(xrot, 1.0, 0.0, 0.0)
     else:
-        RiRotate(-xrot, 1.0, 0.0, 0.0)
+        ri.Rotate(-xrot, 1.0, 0.0, 0.0)
 
     if (direction[0] > 0):
-        RiRotate(-yrot, 0.0, 1.0, 0.0)
+        ri.Rotate(-yrot, 0.0, 1.0, 0.0)
     else:
-        RiRotate(yrot, 0.0, 1.0, 0.0)
+        ri.Rotate(yrot, 0.0, 1.0, 0.0)
 
 
 def PlaceCamera(cam):
-    RiRotate(-cam['roll'], 0.0, 0.0, 1.0);
+    ri.Rotate(-cam['roll'], 0.0, 0.0, 1.0);
     la = cam['look_at']
     loc = cam['location']
     direction = [la[0]-loc[0],
@@ -43,7 +43,7 @@ def PlaceCamera(cam):
                  la[2]-loc[2]]
     AimZ(direction)
     negloc = [-1*x for x in loc]
-    RiTranslate(*negloc)
+    ri.Translate(*negloc)
 
 def f(u,v):
     return 2*math.sin(u) * math.cos(v)
@@ -54,51 +54,51 @@ def main(args):
            'look_at': [0,0,0],
            'roll':0}
     
-    RiBegin()
-    RiSides(2);
+    ri.Begin()
+    ri.Sides(2);
     NUM_FRAMES = 20
     t = 0
     dt = 2*math.pi/(NUM_FRAMES-1);
 
     for i in range(NUM_FRAMES):
-        RiFrameBegin(i);
+        ri.FrameBegin(i);
         print("Rendering frame", i)
-        RiDisplay("images/image{}.tif".format(i),"file","rgba")
-        RiFormat(800, 600,  1.25)
+        ri.Display("images/image{}.tif".format(i),"file","rgba")
+        ri.Format(800, 600,  1.25)
 
         cam['location'] = [rad * math.sin(t), rad, rad * math.cos(t)]
         t += dt;
 
-        RiProjection("perspective")
+        ri.Projection("perspective")
         PlaceCamera(cam)
 
-        RiWorldBegin()
+        ri.WorldBegin()
         umin = vmin = -4*math.pi
         umax = vmax = 4*math.pi
         steps = 128
         du = (umax - umin) / (steps-1)
         dv = (vmax - vmin) / (steps-1)
 
-        RiColor(0,1,0)
+        ri.Color(0,1,0)
         for pt in itertools.product(range(0,steps), range(0,steps)):
             u,v = pt
             u *= du
             v *= dv
             u += umin
             v += vmin
-            RiTransformBegin()
-            RiPolygon(3, P = [u,f(u,v),v,
+            ri.TransformBegin()
+            ri.Polygon(3, P = [u,f(u,v),v,
                               u+du,f(u+du,v+dv),v+dv,
                               u+du,f(u+du,v),v,
                               ])
-            RiPolygon(3, P = [u,f(u,v),v,
+            ri.Polygon(3, P = [u,f(u,v),v,
                               u,f(u,v+dv),v+dv,
                               u+du,f(u+du,v+dv),v+dv])
-            RiTransformEnd()
+            ri.TransformEnd()
 
-        RiWorldEnd()
-        RiFrameEnd()
-    RiEnd();
+        ri.WorldEnd()
+        ri.FrameEnd()
+    ri.End();
 
 if __name__=='__main__':
     main(sys.argv[1:])
