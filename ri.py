@@ -23,20 +23,43 @@ import ctypes
 import sys
 import os
 
-delight_path = os.getenv("DELIGHT")
-libnames = {'win32': '/bin/3delight.dll',
-            'cygwin': '/bin/3delight.dll',
-            'linux2': '/lib/lib3delight.so',
-            'darwin': '/lib/lib3delight.dylib',
-            # Try something...
-            'default': '/lib/lib3delight.so',}
 
-if sys.platform in libnames.keys():
-    delight_lib = delight_path + libnames[sys.platform]
+rman_lib = ''
+
+# Try to use Aqsis or 3Delight
+# TODO: Fix Aqsis, currently gets library loading errors
+env_vars = {'aqsis':'AQSISHOME',
+            '3delight': 'DELIGHT',
+            }
+
+libnames = {'3delight':{'win32': '/bin/3delight.dll',
+                     'cygwin': '/bin/3delight.dll',
+                     'linux2': '/lib/lib3delight.so',
+                     'darwin': '/lib/lib3delight.dylib',
+                     # Try something...
+                     'default': '/lib/lib3delight.so',},
+            
+            'aqsis':{'win32': '/bin/aqsis.dll',
+                        'cygwin': '/bin/aqsis.dll',
+                        'linux2': '/lib/libaqsis_core.so',
+                        'darwin': '/Contents/Resources/lib/libaqsis_core.dylib',
+                        # Try something...
+                        'default': '/lib/libaqsis_core.so',}}
+
+which = os.getenv('pyrib_renderer')
+
+if which is None:
+    which = '3delight'
+
+if sys.platform in libnames[which].keys():
+    plat = sys.platform
 else:
-    delight_lib = delight_path + libnames['default']
+    plat='default'
 
-rlib = ctypes.CDLL(delight_lib)
+
+rman_lib =  os.getenv(env_vars[which]) + libnames[which][plat]
+
+rlib = ctypes.CDLL(rman_lib)
 
 RI_FRAMEBUFFER = 'framebuffer'
 RI_FILE = 'file'
