@@ -57,7 +57,7 @@ else:
     plat='default'
 
 base_lib = os.getenv(env_vars[which])
-if base_lib is None:
+if base_lib is None or len(base_lib)==0:
     # Worth a try?
     base_lib = '/usr'
 
