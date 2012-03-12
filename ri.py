@@ -56,8 +56,12 @@ if sys.platform in libnames[which].keys():
 else:
     plat='default'
 
+base_lib = os.getenv(env_vars[which])
+if base_lib is None:
+    # Worth a try?
+    base_lib = '/usr'
 
-rman_lib =  os.getenv(env_vars[which]) + libnames[which][plat]
+rman_lib = base_lib  + libnames[which][plat]
 
 rlib = ctypes.CDLL(rman_lib)
 
