@@ -30,7 +30,7 @@ def main(args):
     # RiBegin() -> ri.Begin()
     ri.Begin()
 
-    ri.Display("demo.jpg","jpeg","rgb")
+    ri.Display("demo.tif","file","rgba")
     ri.Format(800, 600,  1.0)
 
     ri.Projection("perspective")
