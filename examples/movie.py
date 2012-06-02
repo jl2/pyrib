@@ -16,13 +16,15 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+import sys
+sys.path.append('..')
 
 import ri
 
 import itertools
 import argparse
 import math
-import sys
+
 import os.path
 
 def AimZ(direction):

@@ -17,11 +17,13 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
+import sys
+sys.path.append('..')
+
 import ri
 
 import itertools
 import math
-import sys
 
 def AimZ(direction):
 

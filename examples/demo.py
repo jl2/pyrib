@@ -21,7 +21,8 @@
 
 import math
 import sys
-
+import sys
+sys.path.append('..')
 import ri
 
 def main(args):
